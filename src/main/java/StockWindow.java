@@ -105,10 +105,17 @@ public class StockWindow {
                 }
             }
         });
+        table.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                table.clearSelection();
+            }
+        });
     }
 
     public StockWindow() {
 
+        mPanel = new JPanel(new BorderLayout(0, 0));
         //切换接口
         handler = factoryHandler();
 

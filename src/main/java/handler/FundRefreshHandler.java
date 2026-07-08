@@ -34,6 +34,10 @@ public abstract class FundRefreshHandler extends DefaultTableModel {
             instance.setValue(WindowUtils.FUND_TABLE_HEADER_KEY, WindowUtils.FUND_TABLE_HEADER_VALUE);
             tableHeader = WindowUtils.FUND_TABLE_HEADER_VALUE;
         }
+        if (!tableHeader.contains("今日收益")) {
+            tableHeader = tableHeader + ",今日收益";
+            instance.setValue(WindowUtils.FUND_TABLE_HEADER_KEY, tableHeader);
+        }
         String[] configStr = tableHeader.split(",");
         columnNames = new String[configStr.length];
         for (int i = 0; i < configStr.length; i++) {
@@ -148,11 +152,13 @@ public abstract class FundRefreshHandler extends DefaultTableModel {
 
         int columnIndex3 = WindowUtils.getColumnIndexByName(columnNames, "收益率");
         int columnIndex4 = WindowUtils.getColumnIndexByName(columnNames, "收益");
+        int columnIndex5 = WindowUtils.getColumnIndexByName(columnNames, "今日收益");
 
-        table.getColumn(getColumnName(columnIndex)).setCellRenderer(cellRenderer);
+        if (columnIndex >= 0) table.getColumn(getColumnName(columnIndex)).setCellRenderer(cellRenderer);
 
-        table.getColumn(getColumnName(columnIndex3)).setCellRenderer(cellRenderer);
-        table.getColumn(getColumnName(columnIndex4)).setCellRenderer(cellRenderer);
+        if (columnIndex3 >= 0) table.getColumn(getColumnName(columnIndex3)).setCellRenderer(cellRenderer);
+        if (columnIndex4 >= 0) table.getColumn(getColumnName(columnIndex4)).setCellRenderer(cellRenderer);
+        if (columnIndex5 >= 0) table.getColumn(getColumnName(columnIndex5)).setCellRenderer(cellRenderer);
     }
 
     protected void updateData(FundBean bean) {

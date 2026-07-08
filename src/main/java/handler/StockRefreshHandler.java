@@ -34,6 +34,10 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
             instance.setValue(WindowUtils.STOCK_TABLE_HEADER_KEY, WindowUtils.STOCK_TABLE_HEADER_VALUE);
             tableHeaderValue = WindowUtils.STOCK_TABLE_HEADER_VALUE;
         }
+        if (!tableHeaderValue.contains("今日收益")) {
+            tableHeaderValue = tableHeaderValue + ",今日收益";
+            instance.setValue(WindowUtils.STOCK_TABLE_HEADER_KEY, tableHeaderValue);
+        }
 
         String[] configStr = tableHeaderValue.split(",");
         columnNames = new String[configStr.length];
@@ -144,12 +148,14 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
 
         int columnIndex3 = WindowUtils.getColumnIndexByName(columnNames, "收益率");
         int columnIndex4 = WindowUtils.getColumnIndexByName(columnNames, "收益");
+        int columnIndex5 = WindowUtils.getColumnIndexByName(columnNames, "今日收益");
 
-        table.getColumn(getColumnName(columnIndex1)).setCellRenderer(cellRenderer);
-        table.getColumn(getColumnName(columnIndex2)).setCellRenderer(cellRenderer);
+        if (columnIndex1 >= 0) table.getColumn(getColumnName(columnIndex1)).setCellRenderer(cellRenderer);
+        if (columnIndex2 >= 0) table.getColumn(getColumnName(columnIndex2)).setCellRenderer(cellRenderer);
 
-        table.getColumn(getColumnName(columnIndex3)).setCellRenderer(cellRenderer);
-        table.getColumn(getColumnName(columnIndex4)).setCellRenderer(cellRenderer);
+        if (columnIndex3 >= 0) table.getColumn(getColumnName(columnIndex3)).setCellRenderer(cellRenderer);
+        if (columnIndex4 >= 0) table.getColumn(getColumnName(columnIndex4)).setCellRenderer(cellRenderer);
+        if (columnIndex5 >= 0) table.getColumn(getColumnName(columnIndex5)).setCellRenderer(cellRenderer);
     }
 
     protected void updateData(StockBean bean) {

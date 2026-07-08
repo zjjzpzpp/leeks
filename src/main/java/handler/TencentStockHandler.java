@@ -110,6 +110,18 @@ public class TencentStockHandler extends StockRefreshHandler {
                 }
             }
 
+            String changeStr = bean.getChange();
+            if (StringUtils.isNotEmpty(changeStr)) {
+                String bondStr = bean.getBonds();
+                if (StringUtils.isNotEmpty(bondStr)) {
+                    BigDecimal changeDec = new BigDecimal(changeStr);
+                    BigDecimal bondDec = new BigDecimal(bondStr);
+                    BigDecimal todayIncomeDec = changeDec.multiply(bondDec)
+                            .setScale(2, RoundingMode.HALF_UP);
+                    bean.setTodayIncome(todayIncomeDec.toString());
+                }
+            }
+
             updateData(bean);
         }
     }

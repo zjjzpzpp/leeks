@@ -30,6 +30,8 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.net.MalformedURLException;
 import java.util.List;
 import java.util.*;
@@ -42,6 +44,10 @@ public class FundWindow implements ToolWindowFactory {
 
     private StockWindow stockWindow = new StockWindow();
     private CoinWindow coinWindow = new CoinWindow();
+
+    public FundWindow() {
+        mPanel = new JPanel(new BorderLayout(0, 0));
+    }
 
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
@@ -142,6 +148,12 @@ public class FundWindow implements ToolWindowFactory {
                         }
                     }).show(RelativePoint.fromScreen(new Point(e.getXOnScreen(), e.getYOnScreen())));
                 }
+            }
+        });
+        table.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                table.clearSelection();
             }
         });
         fundRefreshHandler = new TianTianFundHandler(table, refreshTimeLabel);

@@ -15,10 +15,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TianTianFundHandler extends FundRefreshHandler {
     public final static DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
     private static Gson gson = new Gson();
+    private static final Pattern JSONP_PATTERN = Pattern.compile("jsonpgz\\((\\{.*\\})\\);");
 
     private JLabel refreshTimeLabel;
 
@@ -63,16 +66,26 @@ public class TianTianFundHandler extends FundRefreshHandler {
             new Thread(() -> {
                 try {
                     String result = HttpClientPool.getHttpClient().get("http://fundgz.1234567.com.cn/js/" + code + ".js?rt=" + System.currentTimeMillis());
-                    String json = result.substring(8, result.length() - 2);
+                    if (result == null || result.isEmpty()) {
+                        LogUtil.info("Fund编码:[" + code + "]请求无响应");
+                        return;
+                    }
+                    Matcher m = JSONP_PATTERN.matcher(result);
+                    if (!m.find()) {
+                        LogUtil.info("Fund编码:[" + code + "]返回格式异常:" + result);
+                        return;
+                    }
+                    String json = m.group(1);
                     if (!json.isEmpty()) {
                         FundBean bean = gson.fromJson(json, FundBean.class);
                         FundBean.loadFund(bean, codeMap);
 
-                        BigDecimal now = new BigDecimal(bean.getGsz());
+                        BigDecimal gszDec = new BigDecimal(bean.getGsz());
+
                         String costPriceStr = bean.getCostPrise();
                         if (StringUtils.isNotEmpty(costPriceStr)) {
                             BigDecimal costPriceDec = new BigDecimal(costPriceStr);
-                            BigDecimal incomeDiff = now.add(costPriceDec.negate());
+                            BigDecimal incomeDiff = gszDec.add(costPriceDec.negate());
                             if (costPriceDec.compareTo(BigDecimal.ZERO) <= 0) {
                                 bean.setIncomePercent("0");
                             } else {
@@ -89,6 +102,19 @@ public class TianTianFundHandler extends FundRefreshHandler {
                                 BigDecimal incomeDec = incomeDiff.multiply(bondDec)
                                         .setScale(2, RoundingMode.HALF_UP);
                                 bean.setIncome(incomeDec.toString());
+                            }
+                        }
+
+                        String dwjzStr = bean.getDwjz();
+                        if (StringUtils.isNotEmpty(dwjzStr)) {
+                            String bondStr = bean.getBonds();
+                            if (StringUtils.isNotEmpty(bondStr)) {
+                                BigDecimal dwjzDec = new BigDecimal(dwjzStr);
+                                BigDecimal todayDiff = gszDec.add(dwjzDec.negate());
+                                BigDecimal bondDec = new BigDecimal(bondStr);
+                                BigDecimal todayIncomeDec = todayDiff.multiply(bondDec)
+                                        .setScale(2, RoundingMode.HALF_UP);
+                                bean.setTodayIncome(todayIncomeDec.toString());
                             }
                         }
 

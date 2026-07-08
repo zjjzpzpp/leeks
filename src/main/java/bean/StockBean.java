@@ -29,6 +29,7 @@ public class StockBean {
     private String bonds;//持仓
     private String incomePercent;//收益率
     private String income;//收益
+    private String todayIncome;//今日收益
 
     public StockBean() {
     }
@@ -171,6 +172,14 @@ public class StockBean {
         this.income = income;
     }
 
+    public String getTodayIncome() {
+        return todayIncome;
+    }
+
+    public void setTodayIncome(String todayIncome) {
+        this.todayIncome = todayIncome;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -224,6 +233,8 @@ public class StockBean {
                 return this.getCostPrise() != null ? this.getIncomePercent() + "%" : this.getIncomePercent();
             case "收益":
                 return this.getIncome();
+            case "今日收益":
+                return this.getTodayIncome();
             case "更新时间":
                 String timeStr = "--";
                 if (this.getTime() != null) {

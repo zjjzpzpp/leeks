@@ -56,9 +56,12 @@ public class SettingsWindow  implements Configurable {
         checkBoxTableStriped.setSelected(instance.getBoolean("key_table_striped"));
         checkboxSina.setSelected(instance.getBoolean("key_stocks_sina"));
         checkboxLog.setSelected(instance.getBoolean("key_close_log"));
-        cronExpressionFund.setText(instance.getValue("key_cron_expression_fund","0 * * * * ?")); //默认每分钟执行
-        cronExpressionStock.setText(instance.getValue("key_cron_expression_stock","*/10 * * * * ?")); //默认每10秒执行
-        cronExpressionCoin.setText(instance.getValue("key_cron_expression_coin","*/10 * * * * ?")); //默认每10秒执行
+        String cronFund = instance.getValue("key_cron_expression_fund", "0 * * * * ?");
+        cronExpressionFund.setText(StringUtils.isEmpty(cronFund) ? "0 * * * * ?" : cronFund);
+        String cronStock = instance.getValue("key_cron_expression_stock", "*/10 * * * * ?");
+        cronExpressionStock.setText(StringUtils.isEmpty(cronStock) ? "*/10 * * * * ?" : cronStock);
+        String cronCoin = instance.getValue("key_cron_expression_coin", "*/10 * * * * ?");
+        cronExpressionCoin.setText(StringUtils.isEmpty(cronCoin) ? "*/10 * * * * ?" : cronCoin);
         //代理设置
         inputProxy.setText(instance.getValue("key_proxy"));
         proxyTestButton.addActionListener(new ActionListener() {

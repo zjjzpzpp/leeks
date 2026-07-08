@@ -56,10 +56,17 @@ public class CoinWindow {
                 //LogUtil.info(instance.getValue(WindowUtils.COIN_TABLE_HEADER_KEY));
             }
         });
+        table.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                table.clearSelection();
+            }
+        });
     }
 
     public CoinWindow() {
 
+        mPanel = new JPanel(new BorderLayout(0, 0));
         //切换接口
         handler = new YahooCoinHandler(table,refreshTimeLabel);
 
