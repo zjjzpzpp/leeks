@@ -9,7 +9,7 @@ idea插件，查看基金，股票：支持A股，港股，美股
 提issues附上:使用的插件版本、IDEA详细的版本信息(到Help->about里面复制出来)，如果【Event Log】有异常信息，也请在issues附上异常  
 
 ## 安装   
-[插件下载地址](https://github.com/huage2580/leeks/releases)  
+[插件下载地址](https://github.com/zjjzpzpp/leeks/releases)  
 找到 leeks-x.x.x.zip 下载后，直接在IDEA里面安装（安装方式自行百度），注意：直接选择zip文件安装，不要解压。  
 
 ## 使用  
