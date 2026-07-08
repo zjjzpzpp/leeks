@@ -1,5 +1,4 @@
 import com.intellij.icons.AllIcons;
-import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.actionSystem.ActionToolbarPosition;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.ui.popup.JBPopupFactory;
@@ -18,6 +17,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import quartz.HandlerJob;
 import quartz.QuartzManager;
+import utils.Configs;
+import utils.ConfigService;
 import utils.LogUtil;
 import utils.PopupsUiUtil;
 import utils.WindowUtils;
@@ -59,7 +60,7 @@ public class StockWindow {
                 for (int i = 0; i < table.getColumnCount(); i++) {
                     tableHeadChange.append(table.getColumnName(i)).append(",");
                 }
-                PropertiesComponent instance = PropertiesComponent.getInstance();
+                ConfigService instance = Configs.get();
                 //将列名的修改放入环境中 key:stock_table_header_key
                 instance.setValue(WindowUtils.STOCK_TABLE_HEADER_KEY, tableHeadChange
                         .substring(0, tableHeadChange.length() > 0 ? tableHeadChange.length() - 1 : 0));
@@ -145,7 +146,7 @@ public class StockWindow {
     }
 
     private static StockRefreshHandler factoryHandler(){
-        boolean useSinaApi = PropertiesComponent.getInstance().getBoolean("key_stocks_sina");
+        boolean useSinaApi = Configs.get().getBoolean("key_stocks_sina");
         if (useSinaApi){
             if (handler instanceof SinaStockHandler){
                 return handler;
@@ -161,7 +162,7 @@ public class StockWindow {
     public static void apply() {
         if (handler != null) {
             handler = factoryHandler();
-            PropertiesComponent instance = PropertiesComponent.getInstance();
+            ConfigService instance = Configs.get();
             handler.setStriped(instance.getBoolean("key_table_striped"));
             handler.clearRow();
             handler.setupTable(loadStocks());
@@ -170,7 +171,7 @@ public class StockWindow {
     }
     public static void refresh() {
         if (handler != null) {
-            PropertiesComponent instance = PropertiesComponent.getInstance();
+            ConfigService instance = Configs.get();
             handler.refreshColorful(instance.getBoolean("key_colorful"));
             List<String> codes = loadStocks();
             if (CollectionUtils.isEmpty(codes)) {

@@ -1,5 +1,4 @@
 import com.intellij.icons.AllIcons;
-import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.actionSystem.ActionToolbarPosition;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
@@ -51,6 +50,7 @@ public class FundWindow implements ToolWindowFactory {
 
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
+        Configs.set(new IdeaConfig());
         //先加载代理
         loadProxySetting();
 
@@ -64,7 +64,7 @@ public class FundWindow implements ToolWindowFactory {
         contentManager.addContent(content);
         contentManager.addContent(content_stock);
         contentManager.addContent(content_coin);
-        if (StringUtils.isEmpty(PropertiesComponent.getInstance().getValue("key_funds"))) {
+        if (StringUtils.isEmpty(Configs.get().getValue("key_funds"))) {
             // 没有配置基金数据，选择展示股票
             contentManager.setSelectedContent(content_stock);
         }
@@ -80,7 +80,7 @@ public class FundWindow implements ToolWindowFactory {
     }
 
     private void loadProxySetting() {
-        String proxyStr = PropertiesComponent.getInstance().getValue("key_proxy");
+        String proxyStr = Configs.get().getValue("key_proxy");
         HttpClientPool.getHttpClient().buildHttpClient(proxyStr);
     }
 
@@ -104,7 +104,7 @@ public class FundWindow implements ToolWindowFactory {
                 for (int i = 0; i < table.getColumnCount(); i++) {
                     tableHeadChange.append(table.getColumnName(i)).append(",");
                 }
-                PropertiesComponent instance = PropertiesComponent.getInstance();
+                ConfigService instance = Configs.get();
                 //将列名的修改放入环境中 key:fund_table_header_key
                 instance.setValue(WindowUtils.FUND_TABLE_HEADER_KEY, tableHeadChange
                         .substring(0, tableHeadChange.length() > 0 ? tableHeadChange.length() - 1 : 0));
@@ -198,7 +198,7 @@ public class FundWindow implements ToolWindowFactory {
 
     public static void apply() {
         if (fundRefreshHandler != null) {
-            PropertiesComponent instance = PropertiesComponent.getInstance();
+            ConfigService instance = Configs.get();
             fundRefreshHandler.setStriped(instance.getBoolean("key_table_striped"));
             fundRefreshHandler.clearRow();
             fundRefreshHandler.setupTable(loadFunds());
@@ -208,7 +208,7 @@ public class FundWindow implements ToolWindowFactory {
 
     public static void refresh() {
         if (fundRefreshHandler != null) {
-            PropertiesComponent instance = PropertiesComponent.getInstance();
+            ConfigService instance = Configs.get();
             boolean colorful = instance.getBoolean("key_colorful");
             fundRefreshHandler.refreshColorful(colorful);
             List<String> codes = loadFunds();

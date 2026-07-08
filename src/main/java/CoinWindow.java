@@ -1,5 +1,4 @@
 import com.intellij.icons.AllIcons;
-import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.actionSystem.ActionToolbarPosition;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.ui.AnActionButton;
@@ -12,6 +11,8 @@ import org.apache.commons.lang.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import quartz.HandlerJob;
 import quartz.QuartzManager;
+import utils.Configs;
+import utils.ConfigService;
 import utils.WindowUtils;
 
 import javax.swing.*;
@@ -48,7 +49,7 @@ public class CoinWindow {
                 for (int i = 0; i < table.getColumnCount(); i++) {
                     tableHeadChange.append(table.getColumnName(i)).append(",");
                 }
-                PropertiesComponent instance = PropertiesComponent.getInstance();
+                ConfigService instance = Configs.get();
                 //将列名的修改放入环境中 key:coin_table_header_key
                 instance.setValue(WindowUtils.COIN_TABLE_HEADER_KEY, tableHeadChange
                         .substring(0, tableHeadChange.length() > 0 ? tableHeadChange.length() - 1 : 0));
@@ -99,7 +100,7 @@ public class CoinWindow {
 
     public static void apply() {
         if (handler != null) {
-            PropertiesComponent instance = PropertiesComponent.getInstance();
+            ConfigService instance = Configs.get();
             handler.setStriped(instance.getBoolean("key_table_striped"));
             handler.clearRow();
             handler.setupTable(loadCoins());
@@ -108,7 +109,7 @@ public class CoinWindow {
     }
     public static void refresh() {
         if (handler != null) {
-            PropertiesComponent instance = PropertiesComponent.getInstance();
+            ConfigService instance = Configs.get();
             handler.refreshColorful(instance.getBoolean("key_colorful"));
             List<String> codes = loadCoins();
             if (CollectionUtils.isEmpty(codes)) {

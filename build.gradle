@@ -23,6 +23,14 @@ dependencies {
      exclude group:'org.slf4j'
      exclude group:'com.mchange'
     }
+    implementation 'org.apache.httpcomponents:httpclient:4.5.13'
+    implementation 'commons-lang:commons-lang:2.6'
+    implementation 'org.apache.commons:commons-lang3:3.12.0'
+    implementation 'commons-collections:commons-collections:3.2.2'
+    implementation 'org.slf4j:slf4j-api:1.7.36'
+    implementation 'org.slf4j:slf4j-nop:1.7.36'
+    implementation 'com.formdev:flatlaf:3.2.5'
+    implementation 'com.google.code.gson:gson:2.8.9'
 }
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
@@ -49,3 +57,54 @@ tasks.withType(JavaCompile) {
     options.encoding = "UTF-8"
 }
 buildSearchableOptions.enabled = false
+
+sourceSets {
+    desktop {
+        java.srcDirs = ['src/desktop/java']
+        compileClasspath += main.output + main.compileClasspath
+        runtimeClasspath += main.output + main.runtimeClasspath
+    }
+}
+
+task desktopJar(type: Jar) {
+    archiveBaseName = 'leeks-desktop'
+    archiveVersion = project.version
+    from sourceSets.desktop.output
+    from sourceSets.main.output
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    from('src/main/resources') {
+        include 'icon.png'
+    }
+    manifest {
+        attributes 'Main-Class': 'app.DesktopApp'
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+task desktopExe(type: Exec, dependsOn: desktopJar) {
+    def jpackage = "${System.getProperty('java.home')}/bin/jpackage.exe"
+    def outputDir = "${buildDir}/dist"
+
+    doFirst {
+        delete "${outputDir}/leeks"
+        file(outputDir).mkdirs()
+    }
+
+    commandLine jpackage,
+            '--name', 'leeks',
+            '--input', "${buildDir}/libs",
+            '--main-jar', "leeks-desktop-${project.version}.jar",
+            '--main-class', 'app.DesktopApp',
+            '--type', 'app-image',
+            '--dest', outputDir,
+            '--runtime-image', System.getProperty('java.home')
+}
+
+task desktopZip(type: Zip, dependsOn: desktopExe) {
+    archiveBaseName = 'leeks-desktop'
+    archiveVersion = project.version
+    from "${buildDir}/dist/leeks"
+    into 'leeks'
+}

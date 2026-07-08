@@ -1,11 +1,9 @@
 package handler;
 
 import bean.StockBean;
-import com.intellij.ide.util.PropertiesComponent;
-import com.intellij.ui.JBColor;
-import com.intellij.ui.table.JBTable;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
+import utils.Configs;
 import utils.PinYinUtils;
 import utils.WindowUtils;
 
@@ -28,15 +26,14 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
     private boolean colorful = true;
 
     static {
-        PropertiesComponent instance = PropertiesComponent.getInstance();
-        String tableHeaderValue = instance.getValue(WindowUtils.STOCK_TABLE_HEADER_KEY);
+        String tableHeaderValue = Configs.get().getValue(WindowUtils.STOCK_TABLE_HEADER_KEY);
         if (StringUtils.isBlank(tableHeaderValue)) {
-            instance.setValue(WindowUtils.STOCK_TABLE_HEADER_KEY, WindowUtils.STOCK_TABLE_HEADER_VALUE);
+            Configs.get().setValue(WindowUtils.STOCK_TABLE_HEADER_KEY, WindowUtils.STOCK_TABLE_HEADER_VALUE);
             tableHeaderValue = WindowUtils.STOCK_TABLE_HEADER_VALUE;
         }
         if (!tableHeaderValue.contains("今日收益")) {
             tableHeaderValue = tableHeaderValue + ",今日收益";
-            instance.setValue(WindowUtils.STOCK_TABLE_HEADER_KEY, tableHeaderValue);
+            Configs.get().setValue(WindowUtils.STOCK_TABLE_HEADER_KEY, tableHeaderValue);
         }
 
         String[] configStr = tableHeaderValue.split(",");
@@ -101,10 +98,12 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
      * @throws RuntimeException 如果table不是{@link JBTable}类型，请自行实现setStriped
      */
     public void setStriped(boolean striped) {
-        if (table instanceof JBTable) {
-            ((JBTable) table).setStriped(striped);
-        } else {
-            throw new RuntimeException("table不是JBTable类型，请自行实现setStriped");
+        try {
+            Class<?> jbTableClass = Class.forName("com.intellij.ui.table.JBTable");
+            if (jbTableClass.isInstance(table)) {
+                jbTableClass.getMethod("setStriped", boolean.class).invoke(table, striped);
+            }
+        } catch (Exception ignored) {
         }
     }
 
@@ -119,6 +118,10 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
      */
     public abstract void stopHandle();
 
+    public void reapplyColumnColors() {
+        columnColors(this.colorful);
+    }
+
     private void columnColors(boolean colorful) {
         DefaultTableCellRenderer cellRenderer = new DefaultTableCellRenderer() {
             @Override
@@ -126,15 +129,15 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
                 double temp = NumberUtils.toDouble(StringUtils.remove(Objects.toString(value), "%"));
                 if (temp > 0) {
                     if (colorful) {
-                        setForeground(JBColor.RED);
+                        setForeground(Color.RED);
                     } else {
-                        setForeground(JBColor.DARK_GRAY);
+                        setForeground(Color.DARK_GRAY);
                     }
                 } else if (temp < 0) {
                     if (colorful) {
-                        setForeground(JBColor.GREEN);
+                        setForeground(Color.GREEN);
                     } else {
-                        setForeground(JBColor.GRAY);
+                        setForeground(Color.GRAY);
                     }
                 } else {
                     Color orgin = getForeground();

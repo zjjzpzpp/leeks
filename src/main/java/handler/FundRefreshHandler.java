@@ -1,11 +1,9 @@
 package handler;
 
 import bean.FundBean;
-import com.intellij.ide.util.PropertiesComponent;
-import com.intellij.ui.JBColor;
-import com.intellij.ui.table.JBTable;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
+import utils.Configs;
 import utils.PinYinUtils;
 import utils.WindowUtils;
 
@@ -28,15 +26,14 @@ public abstract class FundRefreshHandler extends DefaultTableModel {
     private boolean colorful = true;
 
     static {
-        PropertiesComponent instance = PropertiesComponent.getInstance();
-        String tableHeader = instance.getValue(WindowUtils.FUND_TABLE_HEADER_KEY);
+        String tableHeader = Configs.get().getValue(WindowUtils.FUND_TABLE_HEADER_KEY);
         if (StringUtils.isBlank(tableHeader)) {
-            instance.setValue(WindowUtils.FUND_TABLE_HEADER_KEY, WindowUtils.FUND_TABLE_HEADER_VALUE);
+            Configs.get().setValue(WindowUtils.FUND_TABLE_HEADER_KEY, WindowUtils.FUND_TABLE_HEADER_VALUE);
             tableHeader = WindowUtils.FUND_TABLE_HEADER_VALUE;
         }
         if (!tableHeader.contains("今日收益")) {
             tableHeader = tableHeader + ",今日收益";
-            instance.setValue(WindowUtils.FUND_TABLE_HEADER_KEY, tableHeader);
+            Configs.get().setValue(WindowUtils.FUND_TABLE_HEADER_KEY, tableHeader);
         }
         String[] configStr = tableHeader.split(",");
         columnNames = new String[configStr.length];
@@ -100,10 +97,12 @@ public abstract class FundRefreshHandler extends DefaultTableModel {
      * @throws RuntimeException 如果table不是{@link JBTable}类型，请自行实现setStriped
      */
     public void setStriped(boolean striped) {
-        if (table instanceof JBTable) {
-            ((JBTable) table).setStriped(striped);
-        } else {
-            throw new RuntimeException("table不是JBTable类型，请自行实现setStriped");
+        try {
+            Class<?> jbTableClass = Class.forName("com.intellij.ui.table.JBTable");
+            if (jbTableClass.isInstance(table)) {
+                jbTableClass.getMethod("setStriped", boolean.class).invoke(table, striped);
+            }
+        } catch (Exception ignored) {
         }
     }
 
@@ -123,6 +122,10 @@ public abstract class FundRefreshHandler extends DefaultTableModel {
      */
     public abstract void stopHandle();
 
+    public void reapplyColumnColors() {
+        columnColors(this.colorful);
+    }
+
     private void columnColors(boolean colorful) {
         DefaultTableCellRenderer cellRenderer = new DefaultTableCellRenderer() {
             @Override
@@ -130,15 +133,15 @@ public abstract class FundRefreshHandler extends DefaultTableModel {
                 double temp = NumberUtils.toDouble(StringUtils.remove(Objects.toString(value), "%"));
                 if (temp > 0) {
                     if (colorful) {
-                        setForeground(JBColor.RED);
+                        setForeground(Color.RED);
                     } else {
-                        setForeground(JBColor.DARK_GRAY);
+                        setForeground(Color.DARK_GRAY);
                     }
                 } else if (temp < 0) {
                     if (colorful) {
-                        setForeground(JBColor.GREEN);
+                        setForeground(Color.GREEN);
                     } else {
-                        setForeground(JBColor.GRAY);
+                        setForeground(Color.GRAY);
                     }
                 } else if (temp == 0) {
                     Color orgin = getForeground();

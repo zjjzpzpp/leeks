@@ -1,10 +1,11 @@
-import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.options.ConfigurationException;
 import org.apache.commons.lang.StringUtils;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
 import quartz.QuartzManager;
+import utils.Configs;
+import utils.ConfigService;
 import utils.HttpClientPool;
 import utils.LogUtil;
 
@@ -44,7 +45,7 @@ public class SettingsWindow  implements Configurable {
 
     @Override
     public @Nullable JComponent createComponent() {
-        PropertiesComponent instance = PropertiesComponent.getInstance();
+        ConfigService instance = Configs.get();
         String value = instance.getValue("key_funds");
         String value_stock = instance.getValue("key_stocks");
         String value_coin = instance.getValue("key_coins");
@@ -85,17 +86,17 @@ public class SettingsWindow  implements Configurable {
         if (StringUtils.isNotEmpty(errorMsg)) {
             throw new ConfigurationException(errorMsg);
         }
-        PropertiesComponent instance = PropertiesComponent.getInstance();
+        ConfigService instance = Configs.get();
         instance.setValue("key_funds", textAreaFund.getText());
         instance.setValue("key_stocks", textAreaStock.getText());
         instance.setValue("key_coins", textAreaCoin.getText());
-        instance.setValue("key_colorful",!checkbox.isSelected());
+        instance.setBoolean("key_colorful",!checkbox.isSelected());
         instance.setValue("key_cron_expression_fund", cronExpressionFund.getText());
         instance.setValue("key_cron_expression_stock", cronExpressionStock.getText());
         instance.setValue("key_cron_expression_coin", cronExpressionCoin.getText());
-        instance.setValue("key_table_striped", checkBoxTableStriped.isSelected());
-        instance.setValue("key_stocks_sina",checkboxSina.isSelected());
-        instance.setValue("key_close_log",checkboxLog.isSelected());
+        instance.setBoolean("key_table_striped", checkBoxTableStriped.isSelected());
+        instance.setBoolean("key_stocks_sina",checkboxSina.isSelected());
+        instance.setBoolean("key_close_log",checkboxLog.isSelected());
         String proxy = inputProxy.getText().trim();
         instance.setValue("key_proxy",proxy);
         HttpClientPool.getHttpClient().buildHttpClient(proxy);
@@ -122,7 +123,7 @@ public class SettingsWindow  implements Configurable {
     }
 
     public static List<String> getConfigList(String key, String split) {
-        String value = PropertiesComponent.getInstance().getValue(key);
+        String value = Configs.get().getValue(key);
         if (StringUtils.isEmpty(value)) {
             return new ArrayList<>();
         }
@@ -137,7 +138,7 @@ public class SettingsWindow  implements Configurable {
     }
 
     public static List<String> getConfigList(String key) {
-        String value = PropertiesComponent.getInstance().getValue(key);
+        String value = Configs.get().getValue(key);
         if (StringUtils.isEmpty(value)) {
             return new ArrayList<>();
         }

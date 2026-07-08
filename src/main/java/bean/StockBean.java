@@ -237,8 +237,9 @@ public class StockBean {
                 return this.getTodayIncome();
             case "更新时间":
                 String timeStr = "--";
-                if (this.getTime() != null) {
-                    timeStr = this.getTime().substring(8);
+                String rawTime = this.getTime();
+                if (rawTime != null && rawTime.length() >= 12) {
+                    timeStr = rawTime.substring(8, 10) + ":" + rawTime.substring(10, 12) + ":" + rawTime.substring(12, 14);
                 }
                 return timeStr;
             default:
