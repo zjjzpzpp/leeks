@@ -102,9 +102,9 @@ public class StockPanel extends JPanel {
         if (visibleStr == null || visibleStr.isEmpty()) return;
         java.util.Set<String> visible = new java.util.LinkedHashSet<>();
         for (String s : visibleStr.split(",")) visible.add(s.trim());
+        String[] allCols = getDefaultColumns();
         for (int i = table.getColumnCount() - 1; i >= 0; i--) {
-            String name = table.getColumnName(i);
-            if (!visible.contains(name)) {
+            if (!visible.contains(allCols[i])) {
                 table.removeColumn(table.getColumnModel().getColumn(i));
             }
         }

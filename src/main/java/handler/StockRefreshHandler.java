@@ -131,7 +131,7 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
                     if (colorful) {
                         setForeground(Color.RED);
                     } else {
-                        setForeground(Color.DARK_GRAY);
+                        setForeground(UIManager.getColor("Label.foreground"));
                     }
                 } else if (temp < 0) {
                     if (colorful) {
