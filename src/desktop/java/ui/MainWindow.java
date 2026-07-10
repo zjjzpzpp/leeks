@@ -11,6 +11,7 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 
 public class MainWindow extends JFrame {
+    private IndexBar indexBar;
     private FundPanel fundPanel;
     private StockPanel stockPanel;
     private JCheckBox cbTopmost;
@@ -24,6 +25,9 @@ public class MainWindow extends JFrame {
         int h = parseInt(Configs.get().getValue("window_height"), 500);
         setSize(w, h);
         setLocationRelativeTo(null);
+
+        indexBar = new IndexBar();
+        add(indexBar, BorderLayout.NORTH);
 
         JTabbedPane tabs = new JTabbedPane();
         fundPanel = new FundPanel();
@@ -80,12 +84,14 @@ public class MainWindow extends JFrame {
         SettingsDialog dialog = new SettingsDialog(this);
         dialog.setVisible(true);
         if (dialog.isApplied()) {
+            indexBar.refresh();
             fundPanel.refresh();
             stockPanel.refresh();
         }
     }
 
     private void loadData() {
+        indexBar.refresh();
         fundPanel.refresh();
         stockPanel.refresh();
     }
