@@ -12,6 +12,7 @@ import org.quartz.CronScheduleBuilder;
 import org.quartz.impl.StdSchedulerFactory;
 import utils.Configs;
 import utils.HttpClientPool;
+import utils.PinYinUtils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -244,11 +245,20 @@ public class IndexBar extends JPanel {
         }
     }
 
+    private static boolean isColorful() {
+        String colorStr = Configs.get().getValue("key_colorful");
+        return colorStr == null || Boolean.parseBoolean(colorStr);
+    }
+
     static class IndexItem extends JPanel {
         final String code;
         private final JLabel nameLabel;
         private final JLabel priceLabel;
         private final JLabel changeLabel;
+        private String lastName;
+        private String lastNow;
+        private String lastChange;
+        private String lastChangePercent;
 
         IndexItem(String code) {
             super(new FlowLayout(FlowLayout.LEFT, 6, 0));
@@ -264,48 +274,76 @@ public class IndexBar extends JPanel {
         }
 
         void update(String name, String now, String change, String changePercent) {
-            SwingUtilities.invokeLater(() -> {
-                nameLabel.setText(name != null && !name.isEmpty() ? name : code);
-                priceLabel.setText(now != null ? now : "--");
-                String ch = change != null ? change : "0";
-                String pct = changePercent != null ? changePercent : "0";
-                if (!pct.startsWith("-") && !pct.startsWith("+")) {
-                    try {
-                        if (new BigDecimal(pct).compareTo(BigDecimal.ZERO) > 0) {
-                            pct = "+" + pct;
-                        }
-                    } catch (Exception ignored) {
-                    }
-                }
-                if (!ch.startsWith("-") && !ch.startsWith("+")) {
-                    try {
-                        if (new BigDecimal(ch).compareTo(BigDecimal.ZERO) > 0) {
-                            ch = "+" + ch;
-                        }
-                    } catch (Exception ignored) {
-                    }
-                }
-                changeLabel.setText(ch + "  " + pct + "%");
-                Color color = Color.GRAY;
+            this.lastName = name;
+            this.lastNow = now;
+            this.lastChange = change;
+            this.lastChangePercent = changePercent;
+            SwingUtilities.invokeLater(this::render);
+        }
+
+        void reapplyMode() {
+            SwingUtilities.invokeLater(this::render);
+        }
+
+        private void render() {
+            boolean colorful = isColorful();
+            String displayName = lastName != null && !lastName.isEmpty() ? lastName : code;
+            if (!colorful && displayName != null && !displayName.equals(code)) {
+                displayName = PinYinUtils.toPinYin(displayName);
+            }
+            nameLabel.setText(displayName);
+            priceLabel.setText(lastNow != null ? lastNow : "--");
+            String ch = lastChange != null ? lastChange : "0";
+            String pct = lastChangePercent != null ? lastChangePercent : "0";
+            if (!pct.startsWith("-") && !pct.startsWith("+")) {
                 try {
-                    BigDecimal p = new BigDecimal(changePercent.replace("%", "").replace("+", ""));
+                    if (new BigDecimal(pct).compareTo(BigDecimal.ZERO) > 0) {
+                        pct = "+" + pct;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+            if (!ch.startsWith("-") && !ch.startsWith("+")) {
+                try {
+                    if (new BigDecimal(ch).compareTo(BigDecimal.ZERO) > 0) {
+                        ch = "+" + ch;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+            if (!colorful) {
+                // 隐蔽模式：去掉显眼的 + 前缀
+                if (ch.startsWith("+")) {
+                    ch = ch.substring(1);
+                }
+                if (pct.startsWith("+")) {
+                    pct = pct.substring(1);
+                }
+            }
+            changeLabel.setText(ch + "  " + pct + "%");
+            Color color;
+            Color fg = UIManager.getColor("Label.foreground");
+            if (fg == null) {
+                fg = Color.GRAY;
+            }
+            if (!colorful) {
+                color = fg;
+            } else {
+                color = fg;
+                try {
+                    BigDecimal p = new BigDecimal(
+                            (lastChangePercent != null ? lastChangePercent : "0").replace("%", "").replace("+", ""));
                     if (p.compareTo(BigDecimal.ZERO) > 0) {
                         color = Color.RED;
                     } else if (p.compareTo(BigDecimal.ZERO) < 0) {
                         color = Color.GREEN;
-                    } else {
-                        Color fg = UIManager.getColor("Label.foreground");
-                        color = fg != null ? fg : Color.GRAY;
                     }
-                } catch (Exception e) {
-                    Color fg = UIManager.getColor("Label.foreground");
-                    if (fg != null) {
-                        color = fg;
-                    }
+                } catch (Exception ignored) {
                 }
-                priceLabel.setForeground(color);
-                changeLabel.setForeground(color);
-            });
+            }
+            nameLabel.setForeground(fg);
+            priceLabel.setForeground(color);
+            changeLabel.setForeground(color);
         }
     }
 }

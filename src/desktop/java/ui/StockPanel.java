@@ -1,7 +1,7 @@
 package ui;
 
-import handler.TencentStockHandler;
 import handler.StockRefreshHandler;
+import handler.TencentStockHandler;
 import quartz.HandlerJob;
 import quartz.QuartzManager;
 import utils.Configs;
@@ -10,10 +10,13 @@ import utils.WindowUtils;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.HashMap;
 import java.util.List;
 
 public class StockPanel extends JPanel {
+    private static final String CONFIG_KEY = "key_stocks";
     private static final String VISIBLE_KEY = "stock_visible_columns";
     private final JTable table;
     private final JLabel refreshTimeLabel;
@@ -21,6 +24,9 @@ public class StockPanel extends JPanel {
     private final JButton btnRefresh;
     private final JButton btnStop;
     private final JButton btnColumns;
+    private final JButton btnAdd;
+    private final JButton btnEdit;
+    private final JButton btnDelete;
 
     public StockPanel() {
         super(new BorderLayout());
@@ -29,9 +35,22 @@ public class StockPanel extends JPanel {
 
         table = new JTable();
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         handler = new TencentStockHandler(table, refreshTimeLabel);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        table.setRowSorter(null);
+        TableRowDragSupport.enable(table, handler.codeColumnIndex, codes ->
+                TableRowDragSupport.persistOrder(CONFIG_KEY, codes));
+
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && table.getSelectedRow() >= 0) {
+                    editSelected();
+                }
+            }
+        });
 
         JToolBar toolbar = new JToolBar();
         toolbar.setFloatable(false);
@@ -39,10 +58,20 @@ public class StockPanel extends JPanel {
         btnRefresh.addActionListener(e -> refresh());
         btnStop = new JButton("停止");
         btnStop.addActionListener(e -> stop());
+        btnAdd = new JButton("新增");
+        btnAdd.addActionListener(e -> addRow());
+        btnEdit = new JButton("编辑");
+        btnEdit.addActionListener(e -> editSelected());
+        btnDelete = new JButton("删除");
+        btnDelete.addActionListener(e -> deleteSelected());
         btnColumns = new JButton("列设置");
         btnColumns.addActionListener(e -> showColumnDialog());
         toolbar.add(btnRefresh);
         toolbar.add(btnStop);
+        toolbar.addSeparator();
+        toolbar.add(btnAdd);
+        toolbar.add(btnEdit);
+        toolbar.add(btnDelete);
         toolbar.addSeparator();
         toolbar.add(btnColumns);
         toolbar.add(Box.createHorizontalGlue());
@@ -76,13 +105,91 @@ public class StockPanel extends JPanel {
         return WindowUtils.STOCK_TABLE_HEADER_VALUE.split(",");
     }
 
+    private void addRow() {
+        Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+        HoldingEditDialog dlg = new HoldingEditDialog(owner, "新增股票", "股票编码", "持仓",
+                "", "", "", true);
+        dlg.setVisible(true);
+        if (!dlg.isApplied()) {
+            return;
+        }
+        HoldingConfig.Entry entry = dlg.getEntry();
+        List<HoldingConfig.Entry> list = HoldingConfig.load(CONFIG_KEY);
+        if (HoldingConfig.findByCode(list, entry.code) != null) {
+            JOptionPane.showMessageDialog(this, "编码已存在：" + entry.code, "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        list.add(entry);
+        HoldingConfig.save(CONFIG_KEY, HoldingConfig.mergeByCode(list));
+        refresh();
+    }
+
+    private void editSelected() {
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) {
+            JOptionPane.showMessageDialog(this, "请先选中一行", "提示", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        int modelRow = table.convertRowIndexToModel(viewRow);
+        Object codeObj = handler.getValueAt(modelRow, handler.codeColumnIndex);
+        if (codeObj == null) {
+            return;
+        }
+        String code = codeObj.toString();
+        List<HoldingConfig.Entry> list = HoldingConfig.load(CONFIG_KEY);
+        HoldingConfig.Entry existing = HoldingConfig.findByCode(list, code);
+        String cost = existing != null ? existing.cost : "";
+        String bonds = existing != null ? existing.bonds : "";
+        Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+        HoldingEditDialog dlg = new HoldingEditDialog(owner, "编辑股票", "股票编码", "持仓",
+                code, cost, bonds, false);
+        dlg.setVisible(true);
+        if (!dlg.isApplied()) {
+            return;
+        }
+        HoldingConfig.Entry updated = dlg.getEntry();
+        updated.code = code;
+        if (existing != null) {
+            existing.cost = updated.cost;
+            existing.bonds = updated.bonds;
+        } else {
+            list.add(updated);
+        }
+        HoldingConfig.save(CONFIG_KEY, HoldingConfig.mergeByCode(list));
+        refresh();
+    }
+
+    private void deleteSelected() {
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) {
+            JOptionPane.showMessageDialog(this, "请先选中一行", "提示", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        int modelRow = table.convertRowIndexToModel(viewRow);
+        Object codeObj = handler.getValueAt(modelRow, handler.codeColumnIndex);
+        if (codeObj == null) {
+            return;
+        }
+        String code = codeObj.toString();
+        int ok = JOptionPane.showConfirmDialog(this, "确定删除股票 " + code + " ？", "确认删除",
+                JOptionPane.YES_NO_OPTION);
+        if (ok != JOptionPane.YES_OPTION) {
+            return;
+        }
+        List<HoldingConfig.Entry> list = HoldingConfig.load(CONFIG_KEY);
+        list.removeIf(e -> code.equalsIgnoreCase(e.code));
+        HoldingConfig.save(CONFIG_KEY, list);
+        refresh();
+    }
+
     public void refresh() {
         handler.clearRow();
         String colorStr = Configs.get().getValue("key_colorful");
         boolean colorful = colorStr == null || Boolean.parseBoolean(colorStr);
         handler.refreshColorful(colorful);
         handler.setStriped(Configs.get().getBoolean("key_table_striped"));
-        List<String> codes = getStockCodes();
+        table.setRowSorter(null);
+        List<String> codes = HoldingConfig.toCodeLines(HoldingConfig.load(CONFIG_KEY));
         handler.setupTable(codes);
         applyColumnVisibility();
         if (!codes.isEmpty()) {
@@ -104,7 +211,7 @@ public class StockPanel extends JPanel {
         for (String s : visibleStr.split(",")) visible.add(s.trim());
         String[] allCols = getDefaultColumns();
         for (int i = table.getColumnCount() - 1; i >= 0; i--) {
-            if (!visible.contains(allCols[i])) {
+            if (i < allCols.length && !visible.contains(allCols[i])) {
                 table.removeColumn(table.getColumnModel().getColumn(i));
             }
         }
@@ -117,9 +224,5 @@ public class StockPanel extends JPanel {
     public void stop() {
         QuartzManager.getInstance("Stock").stopJob();
         handler.stopHandle();
-    }
-
-    private List<String> getStockCodes() {
-        return SettingsDialog.parseCodes(Configs.get().getValue("key_stocks"));
     }
 }
