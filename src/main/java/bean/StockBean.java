@@ -1,7 +1,6 @@
 package bean;
 
 import org.apache.commons.lang3.StringUtils;
-import utils.PinYinUtils;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -206,7 +205,7 @@ public class StockBean {
             case "编码":
                 return this.getCode();
             case "股票名称":
-                return colorful ? this.getName() : PinYinUtils.toPinYin(this.getName());
+                return this.getName();
             case "当前价":
                 return this.getNow();
             case "涨跌":

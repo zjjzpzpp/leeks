@@ -2,7 +2,6 @@ package bean;
 
 import com.google.gson.annotations.SerializedName;
 import org.apache.commons.lang3.StringUtils;
-import utils.PinYinUtils;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -180,7 +179,7 @@ public class FundBean {
             case "编码":
                 return this.getFundCode();
             case "基金名称":
-                return colorful ? this.getFundName() : PinYinUtils.toPinYin(this.getFundName());
+                return this.getFundName();
             case "估算净值":
                 return this.getGsz();
             case "估算涨跌":

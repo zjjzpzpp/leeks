@@ -12,7 +12,7 @@ import org.quartz.CronScheduleBuilder;
 import org.quartz.impl.StdSchedulerFactory;
 import utils.Configs;
 import utils.HttpClientPool;
-import utils.PinYinUtils;
+
 
 import javax.swing.*;
 import java.awt.*;
@@ -288,9 +288,6 @@ public class IndexBar extends JPanel {
         private void render() {
             boolean colorful = isColorful();
             String displayName = lastName != null && !lastName.isEmpty() ? lastName : code;
-            if (!colorful && displayName != null && !displayName.equals(code)) {
-                displayName = PinYinUtils.toPinYin(displayName);
-            }
             nameLabel.setText(displayName);
             priceLabel.setText(lastNow != null ? lastNow : "--");
             String ch = lastChange != null ? lastChange : "0";

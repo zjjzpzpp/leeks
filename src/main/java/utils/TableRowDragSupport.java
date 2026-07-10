@@ -1,4 +1,4 @@
-package ui;
+package utils;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -19,11 +19,6 @@ public final class TableRowDragSupport {
     private TableRowDragSupport() {
     }
 
-    /**
-     * @param table           表格（model 需为 DefaultTableModel）
-     * @param codeColumnIndex model 中编码列下标
-     * @param onOrderChanged  拖完后按新顺序返回编码列表
-     */
     public static void enable(JTable table, int codeColumnIndex, Consumer<List<String>> onOrderChanged) {
         table.setDragEnabled(true);
         table.setDropMode(DropMode.INSERT_ROWS);
@@ -118,9 +113,6 @@ public final class TableRowDragSupport {
         });
     }
 
-    /**
-     * 按拖拽后的编码顺序重排配置并保存。
-     */
     public static void persistOrder(String configKey, List<String> orderedCodes) {
         if (orderedCodes == null || orderedCodes.isEmpty()) {
             return;

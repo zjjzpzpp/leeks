@@ -39,7 +39,12 @@ public class FundWindow implements ToolWindowFactory {
     public static final String NAME = "Fund";
     private JPanel mPanel;
 
+    static {
+        Configs.set(new IdeaConfig());
+    }
+
     static TianTianFundHandler fundRefreshHandler;
+    static JBTable fundTable;
 
     private StockWindow stockWindow = new StockWindow();
     private CoinWindow coinWindow = new CoinWindow();
@@ -50,7 +55,6 @@ public class FundWindow implements ToolWindowFactory {
 
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
-        Configs.set(new IdeaConfig());
         //先加载代理
         loadProxySetting();
 
@@ -96,6 +100,7 @@ public class FundWindow implements ToolWindowFactory {
         refreshTimeLabel.setToolTipText("最后刷新时间");
         refreshTimeLabel.setBorder(new EmptyBorder(0, 0, 0, 5));
         JBTable table = new JBTable();
+        fundTable = table;
         //记录列名的变化
         table.getTableHeader().addMouseMotionListener(new MouseMotionAdapter() {
             @Override
@@ -120,13 +125,8 @@ public class FundWindow implements ToolWindowFactory {
                     return;
                 String code = String.valueOf(table.getModel().getValueAt(table.convertRowIndexToModel(table.getSelectedRow()), fundRefreshHandler.codeColumnIndex));//FIX 移动列导致的BUG
                 if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() > 1) {
-                    // 鼠标左键双击
-                    try {
-                        PopupsUiUtil.showImageByFundCode(code, PopupsUiUtil.FundShowType.gsz, new Point(e.getXOnScreen(), e.getYOnScreen()));
-                    } catch (MalformedURLException ex) {
-                        ex.printStackTrace();
-                        LogUtil.info(ex.getMessage());
-                    }
+                    // 双击编辑持仓
+                    editFundRow(table);
                 } else if (SwingUtilities.isRightMouseButton(e)) {
                     //鼠标右键
                     JBPopupFactory.getInstance().createListPopup(new BaseListPopupStep<PopupsUiUtil.FundShowType>("",
@@ -157,6 +157,9 @@ public class FundWindow implements ToolWindowFactory {
             }
         });
         fundRefreshHandler = new TianTianFundHandler(table, refreshTimeLabel);
+        table.setRowSorter(null);
+        TableRowDragSupport.enable(table, fundRefreshHandler.codeColumnIndex, codes ->
+                TableRowDragSupport.persistOrder("key_funds", codes));
         AnActionButton refreshAction = new AnActionButton("停止刷新当前表格数据", AllIcons.Actions.Pause) {
             @Override
             public void actionPerformed(@NotNull AnActionEvent e) {
@@ -173,6 +176,24 @@ public class FundWindow implements ToolWindowFactory {
                     }
                 })
                 .addExtraAction(refreshAction)
+                .addExtraAction(new AnActionButton("新增基金", AllIcons.General.Add) {
+                    @Override
+                    public void actionPerformed(@NotNull AnActionEvent e) {
+                        addFundRow(table);
+                    }
+                })
+                .addExtraAction(new AnActionButton("编辑持仓", AllIcons.Actions.Edit) {
+                    @Override
+                    public void actionPerformed(@NotNull AnActionEvent e) {
+                        editFundRow(table);
+                    }
+                })
+                .addExtraAction(new AnActionButton("删除基金", AllIcons.General.Remove) {
+                    @Override
+                    public void actionPerformed(@NotNull AnActionEvent e) {
+                        deleteFundRow(table);
+                    }
+                })
                 .setToolbarPosition(ActionToolbarPosition.TOP);
         JPanel toolPanel = toolbarDecorator.createPanel();
         toolbarDecorator.getActionsPanel().add(refreshTimeLabel, BorderLayout.EAST);
@@ -182,8 +203,85 @@ public class FundWindow implements ToolWindowFactory {
     }
 
     private static List<String> loadFunds() {
-//        return getConfigList("key_funds", "[,，]");
-        return SettingsWindow.getConfigList("key_funds");
+        return HoldingConfig.toCodeLines(HoldingConfig.load("key_funds"));
+    }
+
+    private static Frame ownerFrame(JComponent c) {
+        Window w = SwingUtilities.getWindowAncestor(c);
+        return w instanceof Frame ? (Frame) w : null;
+    }
+
+    private static void addFundRow(JTable table) {
+        HoldingEditDialog dlg = new HoldingEditDialog(ownerFrame(table), "新增基金", "基金编码", "持有份额",
+                "", "", "", true);
+        dlg.setVisible(true);
+        if (!dlg.isApplied()) {
+            return;
+        }
+        HoldingConfig.Entry entry = dlg.getEntry();
+        List<HoldingConfig.Entry> list = HoldingConfig.load("key_funds");
+        if (HoldingConfig.findByCode(list, entry.code) != null) {
+            JOptionPane.showMessageDialog(table, "编码已存在：" + entry.code, "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        list.add(entry);
+        HoldingConfig.save("key_funds", HoldingConfig.mergeByCode(list));
+        apply();
+    }
+
+    private static void editFundRow(JTable table) {
+        if (fundRefreshHandler == null || table.getSelectedRow() < 0) {
+            JOptionPane.showMessageDialog(table, "请先选中一行", "提示", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        int modelRow = table.convertRowIndexToModel(table.getSelectedRow());
+        Object codeObj = fundRefreshHandler.getValueAt(modelRow, fundRefreshHandler.codeColumnIndex);
+        if (codeObj == null) {
+            return;
+        }
+        String code = codeObj.toString();
+        List<HoldingConfig.Entry> list = HoldingConfig.load("key_funds");
+        HoldingConfig.Entry existing = HoldingConfig.findByCode(list, code);
+        String cost = existing != null ? existing.cost : "";
+        String bonds = existing != null ? existing.bonds : "";
+        HoldingEditDialog dlg = new HoldingEditDialog(ownerFrame(table), "编辑基金", "基金编码", "持有份额",
+                code, cost, bonds, false);
+        dlg.setVisible(true);
+        if (!dlg.isApplied()) {
+            return;
+        }
+        HoldingConfig.Entry updated = dlg.getEntry();
+        updated.code = code;
+        if (existing != null) {
+            existing.cost = updated.cost;
+            existing.bonds = updated.bonds;
+        } else {
+            list.add(updated);
+        }
+        HoldingConfig.save("key_funds", HoldingConfig.mergeByCode(list));
+        apply();
+    }
+
+    private static void deleteFundRow(JTable table) {
+        if (fundRefreshHandler == null || table.getSelectedRow() < 0) {
+            JOptionPane.showMessageDialog(table, "请先选中一行", "提示", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        int modelRow = table.convertRowIndexToModel(table.getSelectedRow());
+        Object codeObj = fundRefreshHandler.getValueAt(modelRow, fundRefreshHandler.codeColumnIndex);
+        if (codeObj == null) {
+            return;
+        }
+        String code = codeObj.toString();
+        int ok = JOptionPane.showConfirmDialog(table, "确定删除基金 " + code + " ？", "确认删除",
+                JOptionPane.YES_NO_OPTION);
+        if (ok != JOptionPane.YES_OPTION) {
+            return;
+        }
+        List<HoldingConfig.Entry> list = HoldingConfig.load("key_funds");
+        list.removeIf(e -> code.equalsIgnoreCase(e.code));
+        HoldingConfig.save("key_funds", list);
+        apply();
     }
 
     @Override
@@ -211,6 +309,9 @@ public class FundWindow implements ToolWindowFactory {
             ConfigService instance = Configs.get();
             boolean colorful = instance.getBoolean("key_colorful");
             fundRefreshHandler.refreshColorful(colorful);
+            if (fundTable != null) {
+                fundTable.setRowSorter(null);
+            }
             List<String> codes = loadFunds();
             if (CollectionUtils.isEmpty(codes)) {
                 stop(); //如果没有数据则不需要启动时钟任务浪费资源

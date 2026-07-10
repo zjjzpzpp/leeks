@@ -1,6 +1,4 @@
-package ui;
-
-import utils.Configs;
+package utils;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -59,15 +57,11 @@ public final class HoldingConfig {
             return list;
         }
         raw = raw.trim();
-        String[] parts;
-        if (raw.contains(";")) {
-            parts = raw.split("[;]");
-        } else {
-            // 单条：可能是 code 或 code,cost,bonds
+        if (!raw.contains(";")) {
             list.add(parseOne(raw));
             return list;
         }
-        for (String p : parts) {
+        for (String p : raw.split("[;]")) {
             if (p != null && !p.trim().isEmpty()) {
                 list.add(parseOne(p.trim()));
             }

@@ -19,8 +19,11 @@ import quartz.HandlerJob;
 import quartz.QuartzManager;
 import utils.Configs;
 import utils.ConfigService;
+import utils.HoldingConfig;
+import utils.HoldingEditDialog;
 import utils.LogUtil;
 import utils.PopupsUiUtil;
+import utils.TableRowDragSupport;
 import utils.WindowUtils;
 
 import javax.swing.*;
@@ -76,13 +79,8 @@ public class StockWindow {
                     return;
                 String code = String.valueOf(table.getModel().getValueAt(table.convertRowIndexToModel(table.getSelectedRow()), handler.codeColumnIndex));//FIX 移动列导致的BUG
                 if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() > 1) {
-                    // 鼠标左键双击
-                    try {
-                        PopupsUiUtil.showImageByStockCode(code, PopupsUiUtil.StockShowType.min, new Point(e.getXOnScreen(), e.getYOnScreen()));
-                    } catch (MalformedURLException ex) {
-                        ex.printStackTrace();
-                        LogUtil.info(ex.getMessage());
-                    }
+                    // 双击编辑持仓
+                    editStockRow();
                 } else if (SwingUtilities.isRightMouseButton(e)) {
                     //鼠标右键
                     JBPopupFactory.getInstance().createListPopup(new BaseListPopupStep<PopupsUiUtil.StockShowType>("",
@@ -119,6 +117,9 @@ public class StockWindow {
         mPanel = new JPanel(new BorderLayout(0, 0));
         //切换接口
         handler = factoryHandler();
+        table.setRowSorter(null);
+        TableRowDragSupport.enable(table, handler.codeColumnIndex, codes ->
+                TableRowDragSupport.persistOrder("key_stocks", codes));
 
         AnActionButton refreshAction = new AnActionButton("停止刷新当前表格数据", AllIcons.Actions.Pause) {
             @Override
@@ -136,6 +137,24 @@ public class StockWindow {
                     }
                 })
                 .addExtraAction(refreshAction)
+                .addExtraAction(new AnActionButton("新增股票", AllIcons.General.Add) {
+                    @Override
+                    public void actionPerformed(@NotNull AnActionEvent e) {
+                        addStockRow();
+                    }
+                })
+                .addExtraAction(new AnActionButton("编辑持仓", AllIcons.Actions.Edit) {
+                    @Override
+                    public void actionPerformed(@NotNull AnActionEvent e) {
+                        editStockRow();
+                    }
+                })
+                .addExtraAction(new AnActionButton("删除股票", AllIcons.General.Remove) {
+                    @Override
+                    public void actionPerformed(@NotNull AnActionEvent e) {
+                        deleteStockRow();
+                    }
+                })
                 .setToolbarPosition(ActionToolbarPosition.TOP);
         JPanel toolPanel = toolbarDecorator.createPanel();
         toolbarDecorator.getActionsPanel().add(refreshTimeLabel, BorderLayout.EAST);
@@ -173,6 +192,7 @@ public class StockWindow {
         if (handler != null) {
             ConfigService instance = Configs.get();
             handler.refreshColorful(instance.getBoolean("key_colorful"));
+            table.setRowSorter(null);
             List<String> codes = loadStocks();
             if (CollectionUtils.isEmpty(codes)) {
                 stop(); //如果没有数据则不需要启动时钟任务浪费资源
@@ -199,8 +219,85 @@ public class StockWindow {
     }
 
     private static List<String> loadStocks(){
-//        return FundWindow.getConfigList("key_stocks", "[,，]");
-        return SettingsWindow.getConfigList("key_stocks");
+        return HoldingConfig.toCodeLines(HoldingConfig.load("key_stocks"));
+    }
+
+    private static Frame ownerFrame() {
+        Window w = SwingUtilities.getWindowAncestor(table);
+        return w instanceof Frame ? (Frame) w : null;
+    }
+
+    private static void addStockRow() {
+        HoldingEditDialog dlg = new HoldingEditDialog(ownerFrame(), "新增股票", "股票编码", "持仓",
+                "", "", "", true);
+        dlg.setVisible(true);
+        if (!dlg.isApplied()) {
+            return;
+        }
+        HoldingConfig.Entry entry = dlg.getEntry();
+        List<HoldingConfig.Entry> list = HoldingConfig.load("key_stocks");
+        if (HoldingConfig.findByCode(list, entry.code) != null) {
+            JOptionPane.showMessageDialog(table, "编码已存在：" + entry.code, "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        list.add(entry);
+        HoldingConfig.save("key_stocks", HoldingConfig.mergeByCode(list));
+        apply();
+    }
+
+    private static void editStockRow() {
+        if (handler == null || table.getSelectedRow() < 0) {
+            JOptionPane.showMessageDialog(table, "请先选中一行", "提示", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        int modelRow = table.convertRowIndexToModel(table.getSelectedRow());
+        Object codeObj = handler.getValueAt(modelRow, handler.codeColumnIndex);
+        if (codeObj == null) {
+            return;
+        }
+        String code = codeObj.toString();
+        List<HoldingConfig.Entry> list = HoldingConfig.load("key_stocks");
+        HoldingConfig.Entry existing = HoldingConfig.findByCode(list, code);
+        String cost = existing != null ? existing.cost : "";
+        String bonds = existing != null ? existing.bonds : "";
+        HoldingEditDialog dlg = new HoldingEditDialog(ownerFrame(), "编辑股票", "股票编码", "持仓",
+                code, cost, bonds, false);
+        dlg.setVisible(true);
+        if (!dlg.isApplied()) {
+            return;
+        }
+        HoldingConfig.Entry updated = dlg.getEntry();
+        updated.code = code;
+        if (existing != null) {
+            existing.cost = updated.cost;
+            existing.bonds = updated.bonds;
+        } else {
+            list.add(updated);
+        }
+        HoldingConfig.save("key_stocks", HoldingConfig.mergeByCode(list));
+        apply();
+    }
+
+    private static void deleteStockRow() {
+        if (handler == null || table.getSelectedRow() < 0) {
+            JOptionPane.showMessageDialog(table, "请先选中一行", "提示", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        int modelRow = table.convertRowIndexToModel(table.getSelectedRow());
+        Object codeObj = handler.getValueAt(modelRow, handler.codeColumnIndex);
+        if (codeObj == null) {
+            return;
+        }
+        String code = codeObj.toString();
+        int ok = JOptionPane.showConfirmDialog(table, "确定删除股票 " + code + " ？", "确认删除",
+                JOptionPane.YES_NO_OPTION);
+        if (ok != JOptionPane.YES_OPTION) {
+            return;
+        }
+        List<HoldingConfig.Entry> list = HoldingConfig.load("key_stocks");
+        list.removeIf(e -> code.equalsIgnoreCase(e.code));
+        HoldingConfig.save("key_stocks", list);
+        apply();
     }
 
 }

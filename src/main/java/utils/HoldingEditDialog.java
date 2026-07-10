@@ -1,4 +1,4 @@
-package ui;
+package utils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -11,17 +11,10 @@ public class HoldingEditDialog extends JDialog {
     private final JTextField costField = new JTextField(16);
     private final JTextField bondsField = new JTextField(16);
     private boolean applied;
-    private final boolean codeEditable;
 
-    /**
-     * @param codeLabel   编码标签，如「基金编码」「股票编码」
-     * @param bondsLabel  份额/持仓标签
-     * @param codeEditable 编辑已有行时编码是否可改
-     */
     public HoldingEditDialog(Frame owner, String title, String codeLabel, String bondsLabel,
                              String code, String cost, String bonds, boolean codeEditable) {
         super(owner, title, true);
-        this.codeEditable = codeEditable;
         setSize(380, 220);
         setLocationRelativeTo(owner);
 
