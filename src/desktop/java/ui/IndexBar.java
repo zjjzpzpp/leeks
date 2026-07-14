@@ -331,9 +331,9 @@ public class IndexBar extends JPanel {
                     BigDecimal p = new BigDecimal(
                             (lastChangePercent != null ? lastChangePercent : "0").replace("%", "").replace("+", ""));
                     if (p.compareTo(BigDecimal.ZERO) > 0) {
-                        color = Color.RED;
+                        color = utils.ColorHelper.RED();
                     } else if (p.compareTo(BigDecimal.ZERO) < 0) {
-                        color = Color.GREEN;
+                        color = utils.ColorHelper.GREEN();
                     }
                 } catch (Exception ignored) {
                 }

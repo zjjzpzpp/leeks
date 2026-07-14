@@ -3,6 +3,7 @@ package handler;
 import bean.StockBean;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
+import utils.ColorHelper;
 import utils.Configs;
 import utils.PinYinUtils;
 import utils.WindowUtils;
@@ -129,13 +130,13 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
                 double temp = NumberUtils.toDouble(StringUtils.remove(Objects.toString(value), "%"));
                 if (temp > 0) {
                     if (colorful) {
-                        setForeground(Color.RED);
+                        setForeground(ColorHelper.RED());
                     } else {
                         setForeground(UIManager.getColor("Label.foreground"));
                     }
                 } else if (temp < 0) {
                     if (colorful) {
-                        setForeground(Color.GREEN);
+                        setForeground(ColorHelper.GREEN());
                     } else {
                         setForeground(Color.GRAY);
                     }
